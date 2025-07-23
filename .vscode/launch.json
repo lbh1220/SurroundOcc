@@ -72,6 +72,28 @@
             "showReturnValue": true,
             "redirectOutput": true,
             "console": "integratedTerminal"
+        },
+        {
+            "name": "test_airsim_conversion",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "tools/create_airsim_occupancy_gt.py",
+            "args": [
+                "--airsim-data-root",
+                "airsim_data_sample",
+                "--map-cloud-path",
+                "airsim_data_sample/map_cloud_resolution1.npy",
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "python": "/home/liang/anaconda3/envs/surroundocc/bin/python",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
+            "stopOnEntry": false,
+            "showReturnValue": true,
+            "redirectOutput": true,
+            "console": "integratedTerminal"
         }
     ]
 }
