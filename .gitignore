@@ -3,3 +3,4 @@ ckpts/
 *.cpython-37.pyc
 __pycache__/
 visual_dir/
+temp/
