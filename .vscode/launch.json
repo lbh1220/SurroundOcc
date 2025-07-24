@@ -74,6 +74,33 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "dist_inference_debug",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "torch.distributed.launch",
+            "args": [
+                "--nproc_per_node=1",
+                "--master_port=29282",
+                "tools/test.py",
+                "./projects/configs/surroundocc/airsimocc_inference.py",
+                "./ckpts/surroundocc_nosemantic.pth",
+                "--launcher", "pytorch",
+                "--deterministic",
+                "--is_vis",
+                "--eval", "bbox"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "python": "/home/liang/anaconda3/envs/surroundocc/bin/python",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
+            "stopOnEntry": false,
+            "showReturnValue": true,
+            "redirectOutput": true,
+            "console": "integratedTerminal"
+        },
+        {
             "name": "test_airsim_conversion",
             "type": "debugpy",
             "request": "launch",
@@ -82,7 +109,29 @@
                 "--airsim-data-root",
                 "airsim_data_sample",
                 "--map-cloud-path",
-                "airsim_data_sample/map_cloud_resolution1.npy",
+                "airsim_data_sample/map_cloud_resolution1.npy"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "python": "/home/liang/anaconda3/envs/surroundocc/bin/python",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
+            "stopOnEntry": false,
+            "showReturnValue": true,
+            "redirectOutput": true,
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "create_airsim_infos_pkl",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "tools/data_converter/create_airsim_infos_pkl.py",
+            "args": [
+                "--dataset_root",
+                "airsim_data_sample",
+                "--output_pkl",
+                "airsim_data_sample/airsim_infos_val.pkl"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"

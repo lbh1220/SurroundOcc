@@ -172,13 +172,13 @@ def transform_points_to_vehicle_frame(world_points, vehicle_pos, vehicle_quat):
     
     # For now, assuming the coordinate systems are aligned
     # If you need axis conversion, uncomment and modify these lines:
-    # xyz_converted = xyz_rotated.copy()
-    # xyz_converted[:, 0] = xyz_rotated[:, 0]  # x: forward
-    # xyz_converted[:, 1] = -xyz_rotated[:, 1]  # y: left (flip if needed)
-    # xyz_converted[:, 2] = xyz_rotated[:, 2]   # z: up
+    xyz_converted = xyz_rotated.copy()
+    xyz_converted[:, 0] = xyz_rotated[:, 0]  # x: forward
+    xyz_converted[:, 1] = -xyz_rotated[:, 1]  # y: left (flip if needed)
+    xyz_converted[:, 2] = -xyz_rotated[:, 2]   # z: up
     
     # Combine back with semantic labels
-    vehicle_points = np.concatenate([xyz_rotated, semantic], axis=1)
+    vehicle_points = np.concatenate([xyz_converted, semantic], axis=1)
     
     return vehicle_points
 
