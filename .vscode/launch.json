@@ -143,6 +143,41 @@
             "showReturnValue": true,
             "redirectOutput": true,
             "console": "integratedTerminal"
-        }
+        },
+        {
+            "name": "local_test_airsim_conversion",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "tools/data_converter/create_airsim_occupancy_gt.py",
+            "args": [
+                "--airsim-data-root",
+                "data/airsim_dataset",
+                "--map-cloud-path",
+                "data/airsim_dataset/map_cloud_1600x1600x600_0_50m.npy",
+                "--point-cloud-range",
+                "-200",
+                "-200",
+                "-100",
+                "200",
+                "200",
+                "100",
+                "--uav-semantic-label",
+                "30",
+                "--evtol-semantic-label",
+                "31",
+                "--resolution",
+                "0.5"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "python": "/home/liang/anaconda3/envs/visocc/bin/python",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false,
+            "stopOnEntry": false,
+            "showReturnValue": true,
+            "redirectOutput": true,
+            "console": "integratedTerminal"
+        },
     ]
 }

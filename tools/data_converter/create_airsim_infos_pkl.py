@@ -108,7 +108,7 @@ def compute_sensor2lidar_transform(sensor2ego_translation, sensor2ego_rotation,
     
     return sensor2lidar_matrix[:3, :3], sensor2lidar_matrix[:3, 3]
 
-def check_data_completeness(trajectory_dir: str, timestamp: str) -> bool:
+def check_data_completeness(trajectory_dir: str, timestamp: str, min_occ_points: int = 100) -> bool:
     """检查指定时间戳下的数据完整性"""
     trajectory_path = Path(trajectory_dir)
     
@@ -129,7 +129,15 @@ def check_data_completeness(trajectory_dir: str, timestamp: str) -> bool:
     if not occ_file.exists():
         print(f"Missing occupancy file: {occ_file}")
         return False
-    
+    # 新增：检查 occ gt 点数
+    try:
+        occ_points = np.load(occ_file)
+        if occ_points.shape[0] < min_occ_points:
+            print(f"Too few points in occupancy file: {occ_file} (count={occ_points.shape[0]})")
+            return False
+    except Exception as e:
+        print(f"Error loading occupancy file: {occ_file}, error: {e}")
+        return False
     return True
 
 def create_sample_info(trajectory_dir: str, row: pd.Series, camera_configs: Dict, 

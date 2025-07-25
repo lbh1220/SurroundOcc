@@ -24,6 +24,7 @@ import glob
 import json
 from os import path as osp
 from scipy.spatial.transform import Rotation as R
+import time
 
 # Add project root to Python path
 sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
@@ -122,22 +123,20 @@ def create_airsim_occupancy_gt(airsim_data_root,
             for idx, row in df.iterrows():
                 timestamp = row['timestamp']
                 
-                # Get vehicle pose
+                t0 = time.time()
                 vehicle_pos = np.array([row['pos_x'], row['pos_y'], row['pos_z']])
                 vehicle_quat = np.array([row['quat_1'], row['quat_2'], 
                                        row['quat_3'], row['quat_4']])  # x,y,z,w
-                
-                # Transform world points to vehicle coordinate system
+                t1 = time.time()
                 vehicle_points = transform_points_to_vehicle_frame(
-                    world_points, vehicle_pos, vehicle_quat)
-                
-                # Filter map points within point cloud range
+                    world_points, vehicle_pos, vehicle_quat, point_cloud_range)
+                t2 = time.time()
                 filtered_map_points = filter_points_by_range(vehicle_points, point_cloud_range)
-                
-                # Get traffic points for this timestamp
+                t3 = time.time()
                 traffic_points = get_traffic_points_at_timestamp(
                     traffic_info, timestamp, vehicle_pos, vehicle_quat, point_cloud_range)
-                
+                t4 = time.time()
+
                 # Combine map and traffic points
                 if len(traffic_points) > 0:
                     combined_points = np.concatenate([filtered_map_points, traffic_points], axis=0)
@@ -145,16 +144,29 @@ def create_airsim_occupancy_gt(airsim_data_root,
                 else:
                     combined_points = filtered_map_points
                     total_traffic_points = 0
-                
+                t5 = time.time()
+
                 # Save occupancy ground truth
                 output_filename = f'{timestamp:.3f}.npy'
                 output_path = osp.join(occ_gt_dir, output_filename)
                 np.save(output_path, combined_points)
-                
-                if idx % 100 == 0:
-                    print(f'    Processed frame {idx+1}/{len(df)}, '
-                          f'map points: {len(filtered_map_points)}/{len(world_points)}, '
-                          f'traffic points: {total_traffic_points}')
+                t6 = time.time()
+
+                print(
+                    f'Processed frame {idx+1}/{len(df)}, '
+                    f'map points: {len(filtered_map_points)}/{len(world_points)}, '
+                    f'traffic points: {total_traffic_points}'
+                )
+                print(
+                    f'    Timing (s): '
+                    f'vehicle_pose: {t1-t0:.3f}, '
+                    f'transform: {t2-t1:.3f}, '
+                    f'filter: {t3-t2:.3f}, '
+                    f'get_traffic: {t4-t3:.3f}, '
+                    f'combine: {t5-t4:.3f}, '
+                    f'save: {t6-t5:.3f}, '
+                    f'total: {t6-t0:.3f}'
+                )
             
             total_frames_processed += len(df)
             print(f'    Completed trajectory {traj_name}, saved {len(df)} occupancy files')
@@ -320,7 +332,7 @@ def get_traffic_points_at_timestamp(traffic_info, timestamp, ego_pos, ego_quat, 
         
         # Transform world aircraft points to ego coordinate system
         ego_aircraft_points = transform_points_to_vehicle_frame(
-            world_aircraft_points, ego_pos, ego_quat)
+            world_aircraft_points, ego_pos, ego_quat, point_cloud_range)
         
         # Filter points within range
         filtered_aircraft_points = filter_points_by_range(ego_aircraft_points, point_cloud_range)
@@ -365,7 +377,7 @@ def transform_aircraft_to_world(aircraft_points, aircraft_pos, aircraft_quat):
     return world_points
 
 
-def transform_points_to_vehicle_frame(world_points, vehicle_pos, vehicle_quat):
+def transform_points_to_vehicle_frame(world_points, vehicle_pos, vehicle_quat, point_cloud_range):
     """Transform points from world coordinate to vehicle coordinate system.
     
     Args:
@@ -377,8 +389,24 @@ def transform_points_to_vehicle_frame(world_points, vehicle_pos, vehicle_quat):
         np.ndarray: Points in vehicle coordinate system (N, 4) [x,y,z,semantic]
     """
     # Extract xyz coordinates and semantic labels
-    xyz = world_points[:, :3].copy()
-    semantic = world_points[:, 3:4].copy()
+    # filter points, speed up the computation when the point cloud is large
+    x_min, y_min, z_min, x_max, y_max, z_max = point_cloud_range
+    x_range = (x_max - x_min) * 1.5
+    y_range = (y_max - y_min) * 1.5
+
+    # 以 vehicle_pos 为中心，筛选 x/y 在范围内的点
+    x_center, y_center = vehicle_pos[0], vehicle_pos[1]
+    x_lower, x_upper = x_center - x_range / 2, x_center + x_range / 2
+    y_lower, y_upper = y_center - y_range / 2, y_center + y_range / 2
+
+    # mask: 只保留在水平范围内的点
+    mask = (
+        (world_points[:, 0] >= x_lower) & (world_points[:, 0] <= x_upper) &
+        (world_points[:, 1] >= y_lower) & (world_points[:, 1] <= y_upper)
+    )
+    filtered_world_points = world_points[mask]
+    xyz = filtered_world_points[:, :3]  #
+    semantic = filtered_world_points[:, 3:4]  #
     
     # Translate: move to vehicle-centered coordinates
     xyz_translated = xyz - vehicle_pos[np.newaxis, :]
@@ -445,8 +473,9 @@ Examples:
     
     # Custom parameters including traffic labels
     python tools/create_airsim_occupancy_gt.py \\
-        --airsim-data-root /path/to/airsim_data_sample \\
-        --point-cloud-range -100 -100 -10 100 100 10 \\
+        --airsim-data-root data/airsim_dataset \\
+        --map-cloud-path data/airsim_dataset/map_cloud_1600x1600x600_0_50m.npy \\
+        --point-cloud-range -200 -200 -100 200 200 100 \\
         --default-semantic-label 0 \\
         --uav-semantic-label 30 \\
         --evtol-semantic-label 31 \\
